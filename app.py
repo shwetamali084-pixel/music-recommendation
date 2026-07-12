@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import zipfile
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import NearestNeighbors
 
@@ -8,7 +9,10 @@ st.set_page_config(page_title="🎵 Music Recommender System", layout="wide")
 st.title("Music Recommender System")
 
 # 📂 Load data
-org_df = pd.read_csv("Data.csv")   
+with zipfile.ZipFile("data.zip") as z:
+    with z.open("data.csv") as f:
+        org_df = pd.read_csv(f)
+# org_df = pd.read_csv("Data.csv")   
 df = org_df[["valence","danceability","energy","tempo",
              "acousticness","instrumentalness","speechiness",
              "popularity","explicit"]]
