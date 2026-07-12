@@ -9,8 +9,8 @@ st.set_page_config(page_title="🎵 Music Recommender System", layout="wide")
 st.title("Music Recommender System")
 
 # 📂 Load data
-with zipfile.ZipFile("data.zip") as z:
-    with z.open("data.csv") as f:
+with zipfile.ZipFile("Data.zip") as z:
+    with z.open("Data.csv") as f:
         org_df = pd.read_csv(f)
 # org_df = pd.read_csv("Data.csv")   
 df = org_df[["valence","danceability","energy","tempo",
