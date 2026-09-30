@@ -16,13 +16,18 @@ from sklearn.neighbors import NearestNeighbors
 # =========================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Images are uploaded directly in GitHub root folder
+# Images are stored directly in GitHub root
 IMAGE_DIR = BASE_DIR
 
-USERS_FILE = os.path.join(BASE_DIR, "users.json")
+USERS_FILE = os.path.join(
+    BASE_DIR,
+    "users.json"
+)
 
-# Dataset in GitHub root folder
-DATA_FILE = os.path.join(BASE_DIR, "music_data.csv")
+DATA_FILE = os.path.join(
+    BASE_DIR,
+    "music_data.csv"
+)
 
 
 # =========================================================
@@ -36,7 +41,7 @@ st.set_page_config(
 
 
 # =========================================================
-# CUSTOM BACKGROUND & CSS
+# BACKGROUND IMAGE
 # =========================================================
 background_image_path = os.path.join(
     IMAGE_DIR,
@@ -61,7 +66,7 @@ if os.path.exists(background_image_path):
 
         [data-testid="stAppViewContainer"] {{
             background-image:
-                url("data:image/jpeg;base64,{encoded_bg}");
+            url("data:image/jpeg;base64,{encoded_bg}");
 
             background-size: cover;
             background-position: center;
@@ -317,7 +322,7 @@ def add_to_listening_history(
         )
     )
 
-    # Remove previous copy of same song
+    # Remove duplicate song
     history = [
         item
         for item in history
@@ -329,7 +334,6 @@ def add_to_listening_history(
         ) != str(song_name)
     ]
 
-    # Add latest song at top
     history.insert(
         0,
         {
@@ -357,7 +361,7 @@ def add_to_listening_history(
 
 
 # =========================================================
-# SIDEBAR USER CONTROLS
+# SIDEBAR USER ACCOUNT
 # =========================================================
 st.sidebar.header(
     "👤 User Account"
@@ -365,7 +369,7 @@ st.sidebar.header(
 
 
 # =========================================================
-# NOT LOGGED IN
+# LOGIN / CREATE ACCOUNT
 # =========================================================
 if st.session_state.current_user is None:
 
@@ -458,7 +462,7 @@ if st.session_state.current_user is None:
 
 
 # =========================================================
-# LOGGED IN USER
+# LOGGED-IN USER
 # =========================================================
 else:
 
@@ -466,6 +470,7 @@ else:
         f"👋 Logged in as: "
         f"**{st.session_state.current_user}**"
     )
+
 
     # -------------------------
     # LOGOUT
@@ -547,7 +552,7 @@ else:
 
 
 # =========================================================
-# DATA PROCESSING
+# ARTIST PARSER
 # =========================================================
 def parse_artist_string(
     artist_val
@@ -561,7 +566,8 @@ def parse_artist_string(
         artist_val
     ).strip()
 
-    # Handle list-style artist data
+
+    # Handle list format
     if (
         text_value.startswith("[")
         and text_value.endswith("]")
@@ -595,6 +601,7 @@ def parse_artist_string(
         ):
 
             pass
+
 
     cleaned = (
         text_value
@@ -663,6 +670,7 @@ def load_and_preprocess_data(
             f"CSV loading error: {error}"
         )
 
+
     if df is None or df.empty:
 
         return (
@@ -670,6 +678,7 @@ def load_and_preprocess_data(
             [],
             "The CSV file is empty."
         )
+
 
     # Normalize column names
     df.columns = [
@@ -682,7 +691,7 @@ def load_and_preprocess_data(
 
 
     # =====================================================
-    # SONG NAME COLUMN
+    # SONG NAME
     # =====================================================
     title_candidates = [
         "name",
@@ -703,7 +712,7 @@ def load_and_preprocess_data(
 
 
     # =====================================================
-    # ARTIST COLUMN
+    # ARTIST
     # =====================================================
     artist_candidates = [
         "artists",
@@ -793,21 +802,13 @@ def load_and_preprocess_data(
     feature_cols = [
 
         "valence",
-
         "acousticness",
-
         "danceability",
-
         "energy",
-
         "instrumentalness",
-
         "liveness",
-
         "loudness",
-
         "speechiness",
-
         "tempo"
     ]
 
@@ -827,7 +828,6 @@ def load_and_preprocess_data(
         )
 
 
-    # At least one feature required
     if not available_features:
 
         return (
@@ -837,7 +837,7 @@ def load_and_preprocess_data(
         )
 
 
-    # Remove invalid feature rows
+    # Remove invalid rows
     df = df.dropna(
         subset=available_features
     ).reset_index(
@@ -948,7 +948,7 @@ org_df, features, data_error = (
 
 
 # =========================================================
-# DATASET ERROR HANDLING
+# DATASET ERROR
 # =========================================================
 if (
     org_df is None
@@ -991,27 +991,11 @@ if not features:
         "were found in the CSV."
     )
 
-    st.info(
-        """
-        Required columns include at least one of:
-
-        valence
-        acousticness
-        danceability
-        energy
-        instrumentalness
-        liveness
-        loudness
-        speechiness
-        tempo
-        """
-    )
-
     st.stop()
 
 
 # =========================================================
-# BUILD MODEL
+# BUILD RECOMMENDATION MODEL
 # =========================================================
 scaler, nn_model, X_scaled = (
     build_recommendation_engine(
@@ -1036,7 +1020,7 @@ if (
 
 
 # =========================================================
-# MAIN UI
+# MAIN RECOMMENDER UI
 # =========================================================
 st.title(
     "🎵 Music Recommender System"
@@ -1048,4 +1032,24 @@ st.caption(
 )
 
 
-# ============================
+# =========================================================
+# SONG DROPDOWN
+# =========================================================
+dropdown_options = org_df.apply(
+    lambda row:
+        f"{row['display_title']} — "
+        f"{row['display_artist']}",
+    axis=1
+).tolist()
+
+
+if not dropdown_options:
+
+    st.error(
+        "❌ No songs found in dataset."
+    )
+
+    st.stop()
+
+
+selected_option = st.selectb
