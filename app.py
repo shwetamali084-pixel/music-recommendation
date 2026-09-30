@@ -178,7 +178,7 @@ if st.session_state.current_user is None:
         login_username = st.text_input("Username", key="login_username")
         login_password = st.text_input("Password", type="password", key="login_password")
 
-        if st.button("🔑 Login", key="login_btn", use_container_width=True):
+        if st.button("🔑 Login", key="login_btn", width='stretch'):
             success, message = login_user(login_username, login_password)
             if success:
                 st.success(message)
@@ -191,7 +191,7 @@ if st.session_state.current_user is None:
         new_password = st.text_input("New password", type="password", key="new_password")
         confirm_password = st.text_input("Confirm password", type="password", key="confirm_password")
 
-        if st.button("Create Account", key="create_user_btn", use_container_width=True):
+        if st.button("Create Account", key="create_user_btn", width='stretch'):
             success, message = create_user(new_username, new_password, confirm_password)
             if success:
                 st.success(message)
@@ -200,7 +200,7 @@ if st.session_state.current_user is None:
                 st.error(message)
 else:
     st.sidebar.success(f"👋 Logged in as: **{st.session_state.current_user}**")
-    if st.sidebar.button("🚪 Logout", key="logout_btn", use_container_width=True):
+    if st.sidebar.button("🚪 Logout", key="logout_btn", width='stretch'):
         st.session_state.current_user = None
         st.rerun()
 
@@ -239,7 +239,7 @@ def parse_artist_string(artist_val):
 def load_and_preprocess_data(filepath):
     """Loads CSV and extracts song titles and parsed artist names from dataset."""
     if not os.path.exists(filepath):
-        return None
+        return None, []
 
     df = pd.read_csv(filepath, on_bad_lines='skip')
     df.columns = [str(c).strip().lower() for c in df.columns]
@@ -261,6 +261,11 @@ def load_and_preprocess_data(filepath):
     for c in available_features:
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
+    # If the dataset has no usable audio features, return an empty result
+    # instead of causing a later TypeError/KeyError.
+    if not available_features:
+        return pd.DataFrame(), []
+
     df = df.dropna(subset=available_features).reset_index(drop=True)
     return df, available_features
 
@@ -268,10 +273,21 @@ def load_and_preprocess_data(filepath):
 @st.cache_resource
 def build_recommendation_engine(df, available_features):
     """Normalizes audio features and trains NearestNeighbors model."""
+    if df is None or df.empty or not available_features:
+        return None, None, None
+
     scaler = MinMaxScaler()
     X_scaled = scaler.fit_transform(df[available_features])
 
-    nn = NearestNeighbors(n_neighbors=min(11, len(X_scaled)), metric="cosine", algorithm="brute")
+    n_neighbors = min(11, len(X_scaled))
+    if n_neighbors < 2:
+        return scaler, None, X_scaled
+
+    nn = NearestNeighbors(
+        n_neighbors=n_neighbors,
+        metric="cosine",
+        algorithm="brute"
+    )
     nn.fit(X_scaled)
     return scaler, nn, X_scaled
 
@@ -280,10 +296,26 @@ def build_recommendation_engine(df, available_features):
 org_df, features = load_and_preprocess_data(DATA_FILE)
 
 if org_df is None or org_df.empty:
-    st.error(f"❌ Dataset file missing or empty! Ensure `music_data.csv` is located in:\n`{BASE_DIR}`")
+    st.error(
+        "❌ Dataset file missing, empty, or could not be loaded. "
+        f"Please ensure `music_data.csv` (or `cleaned_data.csv`) is located in:\n`{BASE_DIR}`"
+    )
+    st.stop()
+
+if not features:
+    st.error(
+        "❌ No usable audio-feature columns were found in the CSV. "
+        "Required columns include at least one of: "
+        "`valence`, `acousticness`, `danceability`, `energy`, "
+        "`instrumentalness`, `liveness`, `loudness`, `speechiness`, `tempo`."
+    )
     st.stop()
 
 scaler, nn_model, X_scaled = build_recommendation_engine(org_df, features)
+
+if nn_model is None or X_scaled is None or len(org_df) < 2:
+    st.error("❌ At least 2 songs with valid audio-feature data are required for recommendations.")
+    st.stop()
 
 
 # =========================================================
@@ -352,7 +384,7 @@ def show_category_image(button_label, filename, caption, key):
         if st.button(f"Open {button_label}", key=key):
             image_path = os.path.join(IMAGE_DIR, filename)
             if os.path.exists(image_path):
-                st.sidebar.image(image_path, caption=caption, use_container_width=True)
+                st.sidebar.image(image_path, caption=caption, width='stretch')
             else:
                 st.sidebar.error(f"❌ File `{filename}` not found in images folder!")
 
@@ -374,7 +406,7 @@ for label, filename, caption in artist_gallery:
     if st.sidebar.button(label, key=f"btn_artist_{filename}"):
         path = os.path.join(IMAGE_DIR, filename)
         if os.path.exists(path):
-            st.sidebar.image(path, caption=caption, use_container_width=True)
+            st.sidebar.image(path, caption=caption, width='stretch')
         else:
             st.sidebar.error(f"❌ File `{filename}` not found!")
 
