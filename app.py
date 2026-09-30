@@ -3,7 +3,6 @@ import json
 import ast
 import hashlib
 import base64
-import html
 from datetime import datetime
 
 import streamlit as st
@@ -16,14 +15,13 @@ from sklearn.neighbors import NearestNeighbors
 # BASE DIRECTORY SETUP
 # =========================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-IMAGE_DIR = os.path.join(BASE_DIR, "images")
+
+# Images are uploaded directly in GitHub root folder
+IMAGE_DIR = BASE_DIR
+
 USERS_FILE = os.path.join(BASE_DIR, "users.json")
 
-# =========================================================
-# DATASET
-# =========================================================
-# Your GitHub repository contains music_data.csv
-# So the application will use music_data.csv directly.
+# Dataset in GitHub root folder
 DATA_FILE = os.path.join(BASE_DIR, "music_data.csv")
 
 
@@ -40,21 +38,31 @@ st.set_page_config(
 # =========================================================
 # CUSTOM BACKGROUND & CSS
 # =========================================================
-background_image_path = os.path.join(IMAGE_DIR, "main.jpg")
+background_image_path = os.path.join(
+    IMAGE_DIR,
+    "main.jpg"
+)
 
 if os.path.exists(background_image_path):
+
     try:
-        with open(background_image_path, "rb") as image_file:
+
+        with open(
+            background_image_path,
+            "rb"
+        ) as image_file:
+
             encoded_bg = base64.b64encode(
                 image_file.read()
             ).decode()
 
         page_bg = f"""
         <style>
+
         [data-testid="stAppViewContainer"] {{
-            background-image: url(
-                "data:image/jpeg;base64,{encoded_bg}"
-            );
+            background-image:
+                url("data:image/jpeg;base64,{encoded_bg}");
+
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -64,20 +72,6 @@ if os.path.exists(background_image_path):
             background: rgba(0, 0, 0, 0);
         }}
 
-        .song-card {{
-            border: 1px solid #1DB954;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 10px 0;
-            background-color: rgba(25, 20, 20, 0.88);
-            color: #FFFFFF;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
-        }}
-
-        .song-card h4 {{
-            margin: 0 0 5px 0;
-            color: #1DB954;
-        }}
         </style>
         """
 
@@ -99,6 +93,7 @@ def load_users():
         return {}
 
     try:
+
         with open(
             USERS_FILE,
             "r",
@@ -116,12 +111,14 @@ def load_users():
         json.JSONDecodeError,
         OSError
     ):
+
         return {}
 
 
 def save_users(users):
 
     try:
+
         with open(
             USERS_FILE,
             "w",
@@ -138,6 +135,7 @@ def save_users(users):
         return True
 
     except OSError:
+
         return False
 
 
@@ -152,9 +150,12 @@ def hash_password(password):
 # SESSION STATE
 # =========================================================
 if "current_user" not in st.session_state:
+
     st.session_state.current_user = None
 
+
 if "users_data" not in st.session_state:
+
     st.session_state.users_data = load_users()
 
 
@@ -170,25 +171,42 @@ def create_user(
     username = username.strip()
 
     if not username:
-        return False, "Please enter a username."
+
+        return (
+            False,
+            "Please enter a username."
+        )
 
     if not password:
-        return False, "Please enter a password."
+
+        return (
+            False,
+            "Please enter a password."
+        )
 
     if len(password) < 6:
-        return False, (
+
+        return (
+            False,
             "Password must contain at least 6 characters."
         )
 
     if password != confirm_password:
-        return False, "Passwords do not match."
+
+        return (
+            False,
+            "Passwords do not match."
+        )
 
     if username in st.session_state.users_data:
-        return False, (
+
+        return (
+            False,
             "Username already exists. Choose another."
         )
 
     st.session_state.users_data[username] = {
+
         "created_at":
             datetime.now().strftime(
                 "%Y-%m-%d %H:%M:%S"
@@ -204,13 +222,19 @@ def create_user(
         st.session_state.users_data
     ):
 
-        del st.session_state.users_data[username]
+        del st.session_state.users_data[
+            username
+        ]
 
-        return False, "Could not save account."
+        return (
+            False,
+            "Could not save account."
+        )
 
     st.session_state.current_user = username
 
-    return True, (
+    return (
+        True,
         f"Account '{username}' created successfully!"
     )
 
@@ -226,25 +250,42 @@ def login_user(
     username = username.strip()
 
     if not username or not password:
-        return False, (
+
+        return (
+            False,
             "Please enter username and password."
         )
 
     if username not in st.session_state.users_data:
-        return False, "Username not found."
+
+        return (
+            False,
+            "Username not found."
+        )
 
     user_data = (
-        st.session_state.users_data[username]
+        st.session_state.users_data[
+            username
+        ]
     )
 
-    saved_password = user_data.get("password")
+    saved_password = user_data.get(
+        "password"
+    )
 
-    if saved_password != hash_password(password):
-        return False, "Incorrect password."
+    if saved_password != hash_password(
+        password
+    ):
+
+        return (
+            False,
+            "Incorrect password."
+        )
 
     st.session_state.current_user = username
 
-    return True, (
+    return (
+        True,
         f"Welcome back, {username}!"
     )
 
@@ -264,6 +305,7 @@ def add_to_listening_history(
         not username
         or username not in st.session_state.users_data
     ):
+
         return False
 
     history = (
@@ -275,19 +317,28 @@ def add_to_listening_history(
         )
     )
 
-    # Remove duplicate copy of same song
+    # Remove previous copy of same song
     history = [
         item
         for item in history
-        if str(item.get("song", "")) != str(song_name)
+        if str(
+            item.get(
+                "song",
+                ""
+            )
+        ) != str(song_name)
     ]
 
+    # Add latest song at top
     history.insert(
         0,
         {
             "song": str(song_name),
+
             "artist": str(artists),
+
             "popularity": str(popularity),
+
             "listened_at":
                 datetime.now().strftime(
                     "%Y-%m-%d %H:%M:%S"
@@ -308,9 +359,14 @@ def add_to_listening_history(
 # =========================================================
 # SIDEBAR USER CONTROLS
 # =========================================================
-st.sidebar.header("👤 User Account")
+st.sidebar.header(
+    "👤 User Account"
+)
 
 
+# =========================================================
+# NOT LOGGED IN
+# =========================================================
 if st.session_state.current_user is None:
 
     # -------------------------
@@ -344,11 +400,15 @@ if st.session_state.current_user is None:
             )
 
             if success:
+
                 st.success(message)
+
                 st.rerun()
 
             else:
+
                 st.error(message)
+
 
     # -------------------------
     # CREATE ACCOUNT
@@ -387,23 +447,29 @@ if st.session_state.current_user is None:
             )
 
             if success:
+
                 st.success(message)
+
                 st.rerun()
 
             else:
+
                 st.error(message)
 
 
+# =========================================================
+# LOGGED IN USER
+# =========================================================
 else:
 
-    # -------------------------
-    # LOGGED IN USER
-    # -------------------------
     st.sidebar.success(
         f"👋 Logged in as: "
         f"**{st.session_state.current_user}**"
     )
 
+    # -------------------------
+    # LOGOUT
+    # -------------------------
     if st.sidebar.button(
         "🚪 Logout",
         key="logout_btn",
@@ -411,7 +477,9 @@ else:
     ):
 
         st.session_state.current_user = None
+
         st.rerun()
+
 
     # -------------------------
     # LISTENING HISTORY
@@ -440,13 +508,21 @@ else:
                 start=1
             ):
 
-                st.markdown(
-                    f"""
-                    **{i}. {item.get('song', 'Unknown Song')}**
-                    
-                    *{item.get('artist', 'Unknown Artist')}*
-                    """
+                song_name = item.get(
+                    "song",
+                    "Unknown Song"
                 )
+
+                artist_name = item.get(
+                    "artist",
+                    "Unknown Artist"
+                )
+
+                st.markdown(
+                    f"**{i}. {song_name}**  \n"
+                    f"*{artist_name}*"
+                )
+
 
             if st.button(
                 "🗑️ Clear History",
@@ -473,15 +549,19 @@ else:
 # =========================================================
 # DATA PROCESSING
 # =========================================================
-def parse_artist_string(artist_val):
+def parse_artist_string(
+    artist_val
+):
 
     if pd.isna(artist_val):
+
         return "Unknown Artist"
 
     text_value = str(
         artist_val
     ).strip()
 
+    # Handle list-style artist data
     if (
         text_value.startswith("[")
         and text_value.endswith("]")
@@ -503,14 +583,17 @@ def parse_artist_string(artist_val):
                     for x in parsed
                 ]
 
-                return ", ".join(
-                    artists
-                ) if artists else "Unknown Artist"
+                if artists:
+
+                    return ", ".join(
+                        artists
+                    )
 
         except (
             ValueError,
             SyntaxError
         ):
+
             pass
 
     cleaned = (
@@ -519,11 +602,11 @@ def parse_artist_string(artist_val):
         .strip()
     )
 
-    return (
-        cleaned
-        if cleaned
-        else "Unknown Artist"
-    )
+    if cleaned:
+
+        return cleaned
+
+    return "Unknown Artist"
 
 
 # =========================================================
@@ -597,6 +680,7 @@ def load_and_preprocess_data(
         for column in df.columns
     ]
 
+
     # =====================================================
     # SONG NAME COLUMN
     # =====================================================
@@ -617,6 +701,7 @@ def load_and_preprocess_data(
         None
     )
 
+
     # =====================================================
     # ARTIST COLUMN
     # =====================================================
@@ -635,6 +720,7 @@ def load_and_preprocess_data(
         ),
         None
     )
+
 
     # =====================================================
     # DISPLAY TITLE
@@ -666,6 +752,7 @@ def load_and_preprocess_data(
             for i in range(len(df))
         ]
 
+
     # =====================================================
     # DISPLAY ARTIST
     # =====================================================
@@ -673,7 +760,9 @@ def load_and_preprocess_data(
 
         df["display_artist"] = (
             df[artist_col]
-            .apply(parse_artist_string)
+            .apply(
+                parse_artist_string
+            )
         )
 
     else:
@@ -681,6 +770,7 @@ def load_and_preprocess_data(
         df["display_artist"] = (
             "Unknown Artist"
         )
+
 
     # =====================================================
     # POPULARITY
@@ -696,18 +786,28 @@ def load_and_preprocess_data(
             .fillna("N/A")
         )
 
+
     # =====================================================
     # AUDIO FEATURES
     # =====================================================
     feature_cols = [
+
         "valence",
+
         "acousticness",
+
         "danceability",
+
         "energy",
+
         "instrumentalness",
+
         "liveness",
+
         "loudness",
+
         "speechiness",
+
         "tempo"
     ]
 
@@ -717,7 +817,8 @@ def load_and_preprocess_data(
         if column in df.columns
     ]
 
-    # Convert audio features to numbers
+
+    # Convert features to numeric
     for column in available_features:
 
         df[column] = pd.to_numeric(
@@ -725,7 +826,8 @@ def load_and_preprocess_data(
             errors="coerce"
         )
 
-    # At least one audio feature is required
+
+    # At least one feature required
     if not available_features:
 
         return (
@@ -734,12 +836,14 @@ def load_and_preprocess_data(
             "No audio feature columns found."
         )
 
-    # Remove rows where audio features are invalid
+
+    # Remove invalid feature rows
     df = df.dropna(
         subset=available_features
     ).reset_index(
         drop=True
     )
+
 
     if df.empty:
 
@@ -748,6 +852,7 @@ def load_and_preprocess_data(
             available_features,
             "No rows contain valid audio feature data."
         )
+
 
     return (
         df,
@@ -780,7 +885,9 @@ def build_recommendation_engine(
             None
         )
 
+
     scaler = MinMaxScaler()
+
 
     try:
 
@@ -796,10 +903,12 @@ def build_recommendation_engine(
             None
         )
 
+
     n_neighbors = min(
         11,
         len(X_scaled)
     )
+
 
     if n_neighbors < 2:
 
@@ -808,6 +917,7 @@ def build_recommendation_engine(
             None,
             X_scaled
         )
+
 
     nn_model = NearestNeighbors(
         n_neighbors=n_neighbors,
@@ -818,6 +928,7 @@ def build_recommendation_engine(
     nn_model.fit(
         X_scaled
     )
+
 
     return (
         scaler,
@@ -884,14 +995,14 @@ if not features:
         """
         Required columns include at least one of:
 
-        valence  
-        acousticness  
-        danceability  
-        energy  
-        instrumentalness  
-        liveness  
-        loudness  
-        speechiness  
+        valence
+        acousticness
+        danceability
+        energy
+        instrumentalness
+        liveness
+        loudness
+        speechiness
         tempo
         """
     )
@@ -937,365 +1048,4 @@ st.caption(
 )
 
 
-# =========================================================
-# SONG DROPDOWN
-# =========================================================
-dropdown_options = org_df.apply(
-    lambda row:
-        f"{row['display_title']} — "
-        f"{row['display_artist']}",
-    axis=1
-).tolist()
-
-
-if not dropdown_options:
-
-    st.error(
-        "❌ No songs found in dataset."
-    )
-
-    st.stop()
-
-
-selected_option = st.selectbox(
-    "🎵 Select a song from dataset:",
-    dropdown_options
-)
-
-
-# =========================================================
-# RECOMMEND BUTTON
-# =========================================================
-if st.button(
-    "🚀 Recommend 5 Songs",
-    type="primary",
-    width="stretch"
-):
-
-    selected_index = (
-        dropdown_options.index(
-            selected_option
-        )
-    )
-
-    selected_row = (
-        org_df.iloc[selected_index]
-    )
-
-    sel_title = (
-        selected_row["display_title"]
-    )
-
-    sel_artist = (
-        selected_row["display_artist"]
-    )
-
-    sel_pop = (
-        selected_row["popularity"]
-    )
-
-    st.subheader(
-        f"🎵 Top 5 Recommended Songs "
-        f"for **{sel_title}** "
-        f"by *{sel_artist}*"
-    )
-
-    # Save selected song to history
-    if st.session_state.current_user:
-
-        add_to_listening_history(
-            sel_title,
-            sel_artist,
-            sel_pop
-        )
-
-    # =====================================================
-    # FIND SIMILAR SONGS
-    # =====================================================
-    distances, indices = (
-        nn_model.kneighbors(
-            [
-                X_scaled[
-                    selected_index
-                ]
-            ]
-        )
-    )
-
-    # Remove selected song itself
-    rec_indices = [
-        int(index)
-        for index in indices[0]
-        if int(index) != selected_index
-    ][:5]
-
-    if not rec_indices:
-
-        st.warning(
-            "No similar songs found."
-        )
-
-    else:
-
-        for rank, idx in enumerate(
-            rec_indices,
-            start=1
-        ):
-
-            rec_row = (
-                org_df.iloc[idx]
-            )
-
-            rec_title = (
-                rec_row["display_title"]
-            )
-
-            rec_artist = (
-                rec_row["display_artist"]
-            )
-
-            rec_pop = (
-                rec_row["popularity"]
-            )
-
-            safe_title = html.escape(
-                str(rec_title)
-            )
-
-            safe_artist = html.escape(
-                str(rec_artist)
-            )
-
-            safe_pop = html.escape(
-                str(rec_pop)
-            )
-
-            col1, col2 = st.columns(
-                [4, 1]
-            )
-
-            with col1:
-
-                st.markdown(
-                    f"""
-                    <div class="song-card">
-                        <h4>
-                            {rank}. {safe_title}
-                        </h4>
-
-                        <p>
-                            <b>Artist:</b>
-                            {safe_artist}
-                        </p>
-
-                        <p>
-                            <b>Popularity:</b>
-                            {safe_pop}
-                        </p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-            with col2:
-
-                st.write("")
-
-                if st.session_state.current_user:
-
-                    if st.button(
-                        "🎧 Mark Listened",
-                        key=f"btn_rec_{idx}_{rank}",
-                        width="stretch"
-                    ):
-
-                        success = (
-                            add_to_listening_history(
-                                rec_title,
-                                rec_artist,
-                                rec_pop
-                            )
-                        )
-
-                        if success:
-
-                            st.toast(
-                                f"Added '{rec_title}' "
-                                "to history!"
-                            )
-
-                        else:
-
-                            st.error(
-                                "Could not save "
-                                "listening history."
-                            )
-
-
-# =========================================================
-# SIDEBAR CATEGORY EXPLORER
-# =========================================================
-st.sidebar.markdown("---")
-
-st.sidebar.title(
-    "🎶 Navigation"
-)
-
-st.sidebar.write(
-    "Hello Shweta 👋"
-)
-
-st.sidebar.header(
-    "📂 Explore Categories"
-)
-
-
-def show_category_image(
-    button_label,
-    filename,
-    caption,
-    key
-):
-
-    with st.sidebar.expander(
-        button_label
-    ):
-
-        if st.button(
-            f"Open {button_label}",
-            key=key,
-            width="stretch"
-        ):
-
-            image_path = os.path.join(
-                IMAGE_DIR,
-                filename
-            )
-
-            if os.path.exists(
-                image_path
-            ):
-
-                st.sidebar.image(
-                    image_path,
-                    caption=caption,
-                    width="stretch"
-                )
-
-            else:
-
-                st.sidebar.error(
-                    f"❌ File `{filename}` "
-                    "not found in images folder!"
-                )
-
-
-# =========================================================
-# CATEGORY IMAGES
-# =========================================================
-show_category_image(
-    "90's Songs",
-    "90s.jpeg",
-    "90's Songs",
-    "btn_90s"
-)
-
-show_category_image(
-    "60's Songs",
-    "60s.jpg.jpeg",
-    "60's Songs",
-    "btn_60s"
-)
-
-show_category_image(
-    "Rap Hits",
-    "Rap.jpg.jpeg",
-    "Rap Songs",
-    "btn_rap"
-)
-
-show_category_image(
-    "Marathi Songs",
-    "Marathi.jpg.jpeg",
-    "Marathi Songs",
-    "btn_marathi"
-)
-
-
-# =========================================================
-# ARTIST GALLERY
-# =========================================================
-st.sidebar.header(
-    "🎬 Artist Hits"
-)
-
-artist_gallery = [
-    (
-        "Open SRK Songs",
-        "SRK.jpg.jpeg",
-        "SRK Songs"
-    ),
-
-    (
-        "Open Vijay Songs",
-        "Vijay.jpg.jpeg",
-        "Vijay Songs"
-    ),
-
-    (
-        "Open Shreya Songs",
-        "Shreya.jpg.jpeg",
-        "Shreya Songs"
-    ),
-
-    (
-        "Open Sonu Songs",
-        "Sonu.jpg.jpeg",
-        "Sonu Songs"
-    )
-]
-
-
-for (
-    label,
-    filename,
-    caption
-) in artist_gallery:
-
-    if st.sidebar.button(
-        label,
-        key=f"btn_artist_{filename}",
-        width="stretch"
-    ):
-
-        image_path = os.path.join(
-            IMAGE_DIR,
-            filename
-        )
-
-        if os.path.exists(
-            image_path
-        ):
-
-            st.sidebar.image(
-                image_path,
-                caption=caption,
-                width="stretch"
-            )
-
-        else:
-
-            st.sidebar.error(
-                f"❌ File `{filename}` "
-                "not found!"
-            )
-
-
-# =========================================================
-# FOOTER
-# =========================================================
-st.sidebar.markdown("---")
-
-st.sidebar.write(
-    "✨ Created by Shweta Mali ✨"
-)
+# ============================
