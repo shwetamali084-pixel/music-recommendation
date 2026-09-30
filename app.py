@@ -2,7 +2,6 @@ import os
 import json
 import ast
 import hashlib
-import base64
 from datetime import datetime
 
 import streamlit as st
@@ -12,18 +11,22 @@ from sklearn.neighbors import NearestNeighbors
 
 
 # =========================================================
-# BASE DIRECTORY SETUP
+# BASE DIRECTORY
 # =========================================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(
+    os.path.abspath(__file__)
+)
 
-# Images are stored directly in GitHub root
+# Images are stored directly in repository root
 IMAGE_DIR = BASE_DIR
 
+# User file
 USERS_FILE = os.path.join(
     BASE_DIR,
     "users.json"
 )
 
+# Dataset
 DATA_FILE = os.path.join(
     BASE_DIR,
     "music_data.csv"
@@ -31,7 +34,7 @@ DATA_FILE = os.path.join(
 
 
 # =========================================================
-# STREAMLIT PAGE CONFIGURATION
+# STREAMLIT CONFIGURATION
 # =========================================================
 st.set_page_config(
     page_title="🎵 Music Recommender System",
@@ -41,56 +44,7 @@ st.set_page_config(
 
 
 # =========================================================
-# BACKGROUND IMAGE
-# =========================================================
-background_image_path = os.path.join(
-    IMAGE_DIR,
-    "main.jpg"
-)
-
-if os.path.exists(background_image_path):
-
-    try:
-
-        with open(
-            background_image_path,
-            "rb"
-        ) as image_file:
-
-            encoded_bg = base64.b64encode(
-                image_file.read()
-            ).decode()
-
-        page_bg = f"""
-        <style>
-
-        [data-testid="stAppViewContainer"] {{
-            background-image:
-            url("data:image/jpeg;base64,{encoded_bg}");
-
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-        }}
-
-        [data-testid="stHeader"] {{
-            background: rgba(0, 0, 0, 0);
-        }}
-
-        </style>
-        """
-
-        st.markdown(
-            page_bg,
-            unsafe_allow_html=True
-        )
-
-    except Exception:
-        pass
-
-
-# =========================================================
-# USER ACCOUNT MANAGEMENT
+# USER MANAGEMENT
 # =========================================================
 def load_users():
 
@@ -300,7 +254,7 @@ def login_user(
 # =========================================================
 def add_to_listening_history(
     song_name,
-    artists="",
+    artist="",
     popularity=""
 ):
 
@@ -322,7 +276,7 @@ def add_to_listening_history(
         )
     )
 
-    # Remove duplicate song
+    # Remove duplicate
     history = [
         item
         for item in history
@@ -334,12 +288,13 @@ def add_to_listening_history(
         ) != str(song_name)
     ]
 
+    # Add latest song
     history.insert(
         0,
         {
             "song": str(song_name),
 
-            "artist": str(artists),
+            "artist": str(artist),
 
             "popularity": str(popularity),
 
@@ -350,7 +305,7 @@ def add_to_listening_history(
         }
     )
 
-    # Keep latest 50 songs
+    # Keep latest 50
     st.session_state.users_data[
         username
     ]["listening_history"] = history[:50]
@@ -361,7 +316,7 @@ def add_to_listening_history(
 
 
 # =========================================================
-# SIDEBAR USER ACCOUNT
+# SIDEBAR - USER ACCOUNT
 # =========================================================
 st.sidebar.header(
     "👤 User Account"
@@ -555,19 +510,20 @@ else:
 # ARTIST PARSER
 # =========================================================
 def parse_artist_string(
-    artist_val
+    artist_value
 ):
 
-    if pd.isna(artist_val):
+    if pd.isna(artist_value):
 
         return "Unknown Artist"
 
     text_value = str(
-        artist_val
+        artist_value
     ).strip()
 
 
-    # Handle list format
+    # Handle values like:
+    # ['Artist 1', 'Artist 2']
     if (
         text_value.startswith("[")
         and text_value.endswith("]")
@@ -617,7 +573,7 @@ def parse_artist_string(
 
 
 # =========================================================
-# LOAD DATASET
+# LOAD AND PREPROCESS DATASET
 # =========================================================
 @st.cache_data(
     show_spinner=False
@@ -626,6 +582,7 @@ def load_and_preprocess_data(
     filepath
 ):
 
+    # Check file
     if not os.path.isfile(filepath):
 
         return (
@@ -634,6 +591,8 @@ def load_and_preprocess_data(
             "Dataset file was not found."
         )
 
+
+    # Read CSV
     try:
 
         df = pd.read_csv(
@@ -671,6 +630,7 @@ def load_and_preprocess_data(
         )
 
 
+    # Check empty
     if df is None or df.empty:
 
         return (
@@ -680,7 +640,9 @@ def load_and_preprocess_data(
         )
 
 
-    # Normalize column names
+    # =====================================================
+    # NORMALIZE COLUMN NAMES
+    # =====================================================
     df.columns = [
         str(column)
         .strip()
@@ -691,7 +653,7 @@ def load_and_preprocess_data(
 
 
     # =====================================================
-    # SONG NAME
+    # FIND SONG NAME COLUMN
     # =====================================================
     title_candidates = [
         "name",
@@ -712,7 +674,7 @@ def load_and_preprocess_data(
 
 
     # =====================================================
-    # ARTIST
+    # FIND ARTIST COLUMN
     # =====================================================
     artist_candidates = [
         "artists",
@@ -802,21 +764,40 @@ def load_and_preprocess_data(
     feature_cols = [
 
         "valence",
+
         "acousticness",
+
         "danceability",
+
         "energy",
+
         "instrumentalness",
+
         "liveness",
+
         "loudness",
+
         "speechiness",
+
         "tempo"
     ]
+
 
     available_features = [
         column
         for column in feature_cols
         if column in df.columns
     ]
+
+
+    # Need audio features
+    if not available_features:
+
+        return (
+            pd.DataFrame(),
+            [],
+            "No audio feature columns found."
+        )
 
 
     # Convert features to numeric
@@ -828,15 +809,6 @@ def load_and_preprocess_data(
         )
 
 
-    if not available_features:
-
-        return (
-            pd.DataFrame(),
-            [],
-            "No audio feature columns found."
-        )
-
-
     # Remove invalid rows
     df = df.dropna(
         subset=available_features
@@ -845,6 +817,7 @@ def load_and_preprocess_data(
     )
 
 
+    # Check data after cleaning
     if df.empty:
 
         return (
@@ -886,6 +859,7 @@ def build_recommendation_engine(
         )
 
 
+    # Normalize audio features
     scaler = MinMaxScaler()
 
 
@@ -904,6 +878,7 @@ def build_recommendation_engine(
         )
 
 
+    # Number of neighbours
     n_neighbors = min(
         11,
         len(X_scaled)
@@ -919,11 +894,13 @@ def build_recommendation_engine(
         )
 
 
+    # Cosine similarity
     nn_model = NearestNeighbors(
         n_neighbors=n_neighbors,
         metric="cosine",
         algorithm="brute"
     )
+
 
     nn_model.fit(
         X_scaled
@@ -938,7 +915,7 @@ def build_recommendation_engine(
 
 
 # =========================================================
-# LOAD DATASET
+# LOAD DATA
 # =========================================================
 org_df, features, data_error = (
     load_and_preprocess_data(
@@ -948,7 +925,7 @@ org_df, features, data_error = (
 
 
 # =========================================================
-# DATASET ERROR
+# DATASET ERROR HANDLING
 # =========================================================
 if (
     org_df is None
@@ -962,13 +939,13 @@ if (
 
     st.info(
         f"""
-        📁 Expected dataset location:
+Expected dataset:
 
-        `{DATA_FILE}`
+`music_data.csv`
 
-        📄 Required filename:
+Location:
 
-        `music_data.csv`
+`{BASE_DIR}`
         """
     )
 
@@ -995,7 +972,7 @@ if not features:
 
 
 # =========================================================
-# BUILD RECOMMENDATION MODEL
+# BUILD MODEL
 # =========================================================
 scaler, nn_model, X_scaled = (
     build_recommendation_engine(
@@ -1012,15 +989,14 @@ if (
 ):
 
     st.error(
-        "❌ At least 2 songs with valid "
-        "audio-feature data are required."
+        "❌ At least 2 valid songs are required."
     )
 
     st.stop()
 
 
 # =========================================================
-# MAIN RECOMMENDER UI
+# MAIN PAGE
 # =========================================================
 st.title(
     "🎵 Music Recommender System"
@@ -1052,4 +1028,46 @@ if not dropdown_options:
     st.stop()
 
 
-selected_option = st.selectb
+selected_option = st.selectbox(
+    "🎵 Select a song from dataset:",
+    dropdown_options
+)
+
+
+# =========================================================
+# RECOMMEND 5 SONGS
+# =========================================================
+if st.button(
+    "🚀 Recommend 5 Songs",
+    type="primary"
+):
+
+    # Find selected song
+    selected_index = (
+        dropdown_options.index(
+            selected_option
+        )
+    )
+
+
+    selected_row = (
+        org_df.iloc[
+            selected_index
+        ]
+    )
+
+
+    selected_title = (
+        selected_row["display_title"]
+    )
+
+    selected_artist = (
+        selected_row["display_artist"]
+    )
+
+    selected_popularity = (
+        selected_row["popularity"]
+    )
+
+
+    # =============
