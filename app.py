@@ -17,10 +17,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGE_DIR = os.path.join(BASE_DIR, "images")
 USERS_FILE = os.path.join(BASE_DIR, "users.json")
 
-# Primary dataset check (music_data.csv or fallback to cleaned_data.csv)
-DATA_FILE = os.path.join(BASE_DIR, "music_data.csv")
-if not os.path.exists(DATA_FILE):
-    DATA_FILE = os.path.join(BASE_DIR, "cleaned_data.csv")
+# Primary dataset
+# cleaned_data.csv is already uploaded to the GitHub repository.
+DATA_FILE = os.path.join(BASE_DIR, "cleaned_data.csv")
 
 
 # =========================================================
@@ -298,7 +297,7 @@ org_df, features = load_and_preprocess_data(DATA_FILE)
 if org_df is None or org_df.empty:
     st.error(
         "❌ Dataset file missing, empty, or could not be loaded. "
-        f"Please ensure `music_data.csv` (or `cleaned_data.csv`) is located in:\n`{BASE_DIR}`"
+        f"Please ensure `cleaned_data.csv` is located in:\n`{BASE_DIR}`"
     )
     st.stop()
 
